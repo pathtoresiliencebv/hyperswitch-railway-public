@@ -25,3 +25,5 @@ The Railway router wrapper pins that digest. The full production wrapper is curr
 Use the manual `Publish patched router core` workflow only when rebuilding the Rust core. Regular bundle changes are built by `Verify and publish Railway images`.
 
 Router migrations are intentionally not duplicated in Git. Run `railway/router/prepare-context.sh` before a local router-wrapper build; CI runs it automatically and fetches migrations from the same pinned upstream commit.
+
+The pinned Juspay Web SDK and control-center bases are mirrored into the same GHCR package. Their wrapper Dockerfiles use the mirrored digests, avoiding `docker.juspay.io` rate limits without changing the vendor image contents.

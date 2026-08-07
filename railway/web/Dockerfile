@@ -1,4 +1,4 @@
-FROM docker.juspay.io/juspaydotin/hyperswitch-web@sha256:9ae538bd55ff9a4ec096629f070ea1f936802c29b5a4ff0b91656061275c54ad
+FROM ghcr.io/pathtoresiliencebv/hyperswitch-railway-public@sha256:0aaa8afae1edc10e44507a250c3721369a98eda78f132d683614f04f54b104b6
 
 WORKDIR /usr/src/app
 COPY start-web.sh /usr/local/bin/start-web.sh

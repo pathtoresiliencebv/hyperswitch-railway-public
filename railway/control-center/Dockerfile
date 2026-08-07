@@ -1,4 +1,4 @@
-FROM docker.juspay.io/juspaydotin/hyperswitch-control-center@sha256:09f15c92903f8c749dd45a2818b16eeffe10ea99c6c6ed6af4b9e0580df02090
+FROM ghcr.io/pathtoresiliencebv/hyperswitch-railway-public@sha256:abc84be6827f41fb098d9cb83f37c96c5cdbc673a121417e7eb9509efe01fa8b
 
 USER root
 
