@@ -1,0 +1,50 @@
+name: Publish patched router core
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  UPSTREAM_COMMIT: 5b9f9a52038e3420d496fdc04c19f6dcd49d9474
+  CORE_IMAGE: ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:router-core-5b9f9a5-refund-fix
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out deployment repository
+        uses: actions/checkout@v4
+
+      - name: Check out pinned Hyperswitch source
+        run: |
+          git init /tmp/hyperswitch-source
+          git -C /tmp/hyperswitch-source remote add origin https://github.com/juspay/hyperswitch.git
+          git -C /tmp/hyperswitch-source fetch --depth 1 origin "$UPSTREAM_COMMIT"
+          git -C /tmp/hyperswitch-source checkout --detach FETCH_HEAD
+          git -C /tmp/hyperswitch-source apply "$GITHUB_WORKSPACE/railway/router/patches/0001-preserve-processor-token-payment-method-type.patch"
+          cp "$GITHUB_WORKSPACE/router-core/Dockerfile" /tmp/hyperswitch-source/Dockerfile.railway
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish pinned router core
+        uses: docker/build-push-action@v6
+        with:
+          context: /tmp/hyperswitch-source
+          file: /tmp/hyperswitch-source/Dockerfile.railway
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.CORE_IMAGE }}
+          cache-from: type=gha,scope=router-core
+          cache-to: type=gha,mode=max,scope=router-core

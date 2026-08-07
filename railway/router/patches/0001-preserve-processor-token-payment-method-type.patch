@@ -1,0 +1,30 @@
+diff --git a/crates/router/src/core/payments/helpers.rs b/crates/router/src/core/payments/helpers.rs
+index da6fc2caee..301c8e0765 100644
+--- a/crates/router/src/core/payments/helpers.rs
++++ b/crates/router/src/core/payments/helpers.rs
+@@ -525,7 +525,7 @@ pub async fn get_token_pm_type_mandate_details(
+                             (
+                                 None,
+                                 request.payment_method,
+-                                None,
++                                request.payment_method_type,
+                                 None,
+                                 None,
+                                 Some(payments::MandateConnectorDetails {
+@@ -535,7 +535,15 @@ pub async fn get_token_pm_type_mandate_details(
+                                 None,
+                             )
+                         } else {
+-                            (None, request.payment_method, None, None, None, None, None)
++                            (
++                                None,
++                                request.payment_method,
++                                request.payment_method_type,
++                                None,
++                                None,
++                                None,
++                                None,
++                            )
+                         }
+                     }
+                     RecurringDetails::MandateId(mandate_id) => {

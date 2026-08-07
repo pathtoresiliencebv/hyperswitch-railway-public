@@ -1,9 +1,27 @@
 # Hyperswitch Railway Public Images
 
-This repository anchors the public GitHub Container Registry package used by the Railway deployment.
-
-The real service images are built locally from the Railway bundle and pushed as tags on:
+This repository contains the non-secret, reproducible deployment source for the Hyperswitch Railway SaaS stack and publishes its public images to:
 
 `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public`
 
-Runtime secrets and service URLs live in Railway variables, not in this repository.
+The deployable bundle lives in `railway/`. Runtime credentials, encryption keys, database URLs, PSP credentials, and service URLs remain Railway variables and must never be committed here.
+
+## Patched router provenance
+
+The production router is based on upstream Hyperswitch commit `5b9f9a52038e3420d496fdc04c19f6dcd49d9474` with one reviewed patch:
+
+`railway/router/patches/0001-preserve-processor-token-payment-method-type.patch`
+
+That patch preserves `payment_method_type` for processor-payment-token flows so a later Hyperswitch refund can supply Stripe's required payment-method type. The patched core image is immutable:
+
+- tag: `router-core-5b9f9a5-refund-fix`
+- digest: `sha256:abc8a953ad48d997b8fc5d735c280c613083c9d2ac3757d6af63f50dedbdc3eb`
+
+The Railway router wrapper pins that digest. The full production wrapper is currently:
+
+- tag: `router-20260807-stripe-refund-fix`
+- digest: `sha256:33bbcda2335f5805438a708764284953e14a9ef8f9a446e1b5c5bf78fbc87f9d`
+
+Use the manual `Publish patched router core` workflow only when rebuilding the Rust core. Regular bundle changes are built by `Verify and publish Railway images`.
+
+Router migrations are intentionally not duplicated in Git. Run `railway/router/prepare-context.sh` before a local router-wrapper build; CI runs it automatically and fetches migrations from the same pinned upstream commit.

@@ -1,0 +1,3 @@
+FROM ghcr.io/juspay/superposition-demo@sha256:51f3a310016879b7419ab64e6b6dbc81c739cdf5985f8f4cc19ba6f9384b2c6d
+
+EXPOSE 8080

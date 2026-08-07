@@ -1,0 +1,4 @@
+*
+!Dockerfile
+!backup.sh
+!restore-test.sh
