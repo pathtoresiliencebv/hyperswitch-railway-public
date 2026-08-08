@@ -6,6 +6,7 @@ Services:
 - `router`: Hyperswitch API, runs Diesel migrations on boot, then starts `/local/bin/router`.
 - `web`: Hyperswitch Web SDK.
 - `control-center`: Hyperswitch dashboard with runtime API/SDK URLs injected from Railway variables.
+- `beta-gateway`: public Stripe-test-only policy gateway in front of the private router.
 - `superposition`: Superposition demo service used by Hyperswitch config.
 - `superposition-seed`: one-shot seed job for Superposition dimensions and defaults.
 - `postgres-backup`: daily encrypted logical backup job with retention and a reusable restore verifier.
@@ -18,6 +19,7 @@ Expected Railway services in one project:
 - `router`
 - `web`
 - `control-center`
+- `beta-gateway`
 - `postgres-backup`
 
 The router image uses the local `config/railway.toml`, `payment_required_fields_v2.toml`, `superposition_seed.toml`, and copied Hyperswitch migrations. Runtime secrets and service URLs are set as Railway variables, not stored in this folder.
@@ -32,7 +34,7 @@ The router image uses the local `config/railway.toml`, `payment_required_fields_
 
 Public endpoints:
 
-- Router: `https://router-production-32a7.up.railway.app`
+- Protected API gateway: `https://beta-gateway-production.up.railway.app`
 - Web SDK: `https://web-production-feaf3.up.railway.app/HyperLoader.js`
 - Control center: `https://control-center-production-403b.up.railway.app`
 
@@ -41,15 +43,20 @@ Runtime image tags:
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:router-core-5b9f9a5-refund-fix`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:router-20260807-stripe-refund-fix`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:web-20260715-railway-hostfix`
-- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:control-center-20260807-security-v1`
+- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:control-center-20260808-beta-v2`
+- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:beta-gateway-20260808-v1`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:postgres-backup-20260807-v3`
 
-Verification on 2026-08-07:
+Verification on 2026-08-08:
 
-- `curl https://router-production-32a7.up.railway.app/health` returned `200` with `health is good`.
+- `curl https://beta-gateway-production.up.railway.app/health` returned `200` with `health is good` and `X-Hyperswitch-Beta-Mode: stripe-test-only`.
+- The gateway rejects fake live Stripe keys and inline payment credentials with `403`, while CORS preflight and the sandbox payment API remain available.
 - `curl -I https://web-production-feaf3.up.railway.app/HyperLoader.js` returned `200`.
 - `curl -I https://control-center-production-403b.up.railway.app` returned `200`.
-- Railway health checks are configured for `/health`, `/HyperLoader.js`, and `/` respectively.
+- Railway health checks are configured for `/health`, `/health`, `/HyperLoader.js`, and `/` on the router, gateway, Web SDK, and control center respectively.
+- Beta gateway deployment `5c23d842-650e-45c3-b2c6-eb774880fd45` reached `SUCCESS` with image digest `sha256:aaaf193ac74c747e39c3d61bf8a7ecc42af7dc08f6a7680021e341d455718a7a`.
+- Control center deployment `ae9dab6f-9d19-4148-af78-46783083f242` reached `SUCCESS` with image digest `sha256:0d2e23eceef43ddd234dd0a6f2643aa811b547ed6fc289401387c3f74de5db50`. Its dashboard points to the protected gateway, shows a persistent sandbox warning, and reflows without horizontal overflow at an emulated 320 CSS px viewport.
+- The Stripe CLI regression through the public gateway completed a EUR 15.99 payment and EUR 4.00 partial refund, with matching Stripe objects and events. All temporary tenant, key, connector, and webhook resources were cleaned up; no live-mode action was attempted.
 - Router deployment `175ecfca-1d03-4692-9a8a-3c7d615e8e20` reached `SUCCESS` after the health-check release.
 - Router deployment `559c7ec9-af61-4f4a-92f2-ca85b02c344b` reached `SUCCESS` after production console logging was reduced from `DEBUG` to `INFO`.
 - Router deployment `fed36664-2654-43aa-9a2f-55b02c75ea12` reached `SUCCESS` after the fixed example API-key hash key was replaced by a unique 32-byte Railway secret. The database contained zero API keys before rotation.
@@ -113,7 +120,7 @@ Railway dashboard:
 
 ## Production boundary
 
-The platform and tenant onboarding are live, and Stripe test mode has been proven for payment, signed webhook delivery, and a Hyperswitch-initiated partial refund. Hyperswitch still cannot move real money without each merchant's live payment-processor credentials. Each merchant must connect a sandbox or live PSP account (for example Mollie, Stripe, or Adyen) in the control center. Never commit PSP credentials to this bundle; store them through the control center or Railway secrets.
+The platform and tenant onboarding are live as a controlled sandbox beta. Stripe test mode has been proven for payment, signed webhook delivery, and a Hyperswitch-initiated partial refund. The public gateway intentionally prevents merchants from configuring live Stripe credentials or creating other connector types. Never commit PSP credentials to this bundle; store test credentials through the control center.
 
 The current deployment uses Railway-provided domains. Add owned custom domains and transactional email before presenting this as a fully branded commercial product. The router's `release` feature set includes email support, but the live config still contains the local MailHog SMTP placeholders and Railway has no SMTP/SES variables. Signup works, while email verification and password-reset delivery are not operational until a real transactional-email provider is configured and tested.
 

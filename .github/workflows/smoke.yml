@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify router, Web SDK, and control center
+      - name: Verify beta API gateway, Web SDK, and control center
         shell: bash
         run: |
           set -euo pipefail
@@ -41,10 +41,26 @@ jobs:
           )
 
           curl "${curl_options[@]}" \
-            --output "$temporary_directory/router-health.txt" \
-            https://router-production-32a7.up.railway.app/health
+            --dump-header "$temporary_directory/gateway-health.headers" \
+            --output "$temporary_directory/gateway-health.txt" \
+            https://beta-gateway-production.up.railway.app/health
           grep --fixed-strings --quiet 'health is good' \
-            "$temporary_directory/router-health.txt"
+            "$temporary_directory/gateway-health.txt"
+
+          tr '[:upper:]' '[:lower:]' \
+            < "$temporary_directory/gateway-health.headers" \
+            > "$temporary_directory/gateway-health.headers.lower"
+          grep --fixed-strings --quiet \
+            'x-hyperswitch-beta-mode: stripe-test-only' \
+            "$temporary_directory/gateway-health.headers.lower"
+
+          curl "${curl_options[@]}" \
+            --output "$temporary_directory/beta-policy.json" \
+            https://beta-gateway-production.up.railway.app/beta-policy
+          grep --fixed-strings --quiet '"connectors":"stripe_test_only"' \
+            "$temporary_directory/beta-policy.json"
+          grep --fixed-strings --quiet '"live_credentials":"blocked"' \
+            "$temporary_directory/beta-policy.json"
 
           curl "${curl_options[@]}" \
             --output "$temporary_directory/HyperLoader.js" \
@@ -56,6 +72,10 @@ jobs:
             --output "$temporary_directory/control-center.html" \
             https://control-center-production-403b.up.railway.app/
           grep --fixed-strings --quiet '<div id="app">' \
+            "$temporary_directory/control-center.html"
+          grep --fixed-strings --quiet 'Sandbox beta' \
+            "$temporary_directory/control-center.html"
+          grep --fixed-strings --quiet 'Test mode only.' \
             "$temporary_directory/control-center.html"
 
           tr '[:upper:]' '[:lower:]' \

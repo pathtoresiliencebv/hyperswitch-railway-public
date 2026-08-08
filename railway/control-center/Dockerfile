@@ -8,6 +8,7 @@ COPY dashboard.toml.template /tmp/dashboard-config.toml.template
 COPY dashboard_theme.json /tmp/dashboard-theme.json
 COPY start-control-center.sh /usr/local/bin/start-control-center.sh
 COPY secure-proxy.mjs /usr/local/lib/secure-proxy.mjs
+COPY beta-banner.mjs /usr/local/lib/beta-banner.mjs
 
 RUN chmod +x /usr/local/bin/start-control-center.sh
 

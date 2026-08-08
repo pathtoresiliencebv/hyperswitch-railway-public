@@ -5,10 +5,10 @@ This guide is for the current public **test-mode beta**. It is not permission to
 ## Current endpoints
 
 - Control center: <https://control-center-production-403b.up.railway.app>
-- Router API: <https://router-production-32a7.up.railway.app>
+- Protected API gateway: <https://beta-gateway-production.up.railway.app>
 - Web SDK: <https://web-production-feaf3.up.railway.app/HyperLoader.js>
 
-These are temporary Railway domains. Transactional email and password-reset delivery are not operational yet, so use an address and password you can retain safely.
+These are temporary Railway domains. The API gateway rejects live Stripe credentials, non-Stripe connector creation, and inline connector credentials. Transactional email and password-reset delivery are not operational yet, so use an address and password you can retain safely.
 
 ## 1. Create your tenant
 
@@ -50,7 +50,7 @@ Do not put the Stripe secret in a JSON file or command committed to Git.
 Set these local shell values. Replace every placeholder with values from your own tenant and connector:
 
 ```bash
-export HS_ROUTER_URL='https://router-production-32a7.up.railway.app'
+export HS_ROUTER_URL='https://beta-gateway-production.up.railway.app'
 export HS_MERCHANT_ID='your_merchant_id'
 export HS_MCA_ID='mca_your_connector_id'
 export HS_WEBHOOK_URL="${HS_ROUTER_URL}/webhooks/${HS_MERCHANT_ID}/${HS_MCA_ID}"

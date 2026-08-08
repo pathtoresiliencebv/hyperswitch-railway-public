@@ -29,6 +29,11 @@ jobs:
           bash -n railway/postgres-backup/restore-test.sh
           bash -n railway/router/prepare-context.sh
           node --check railway/control-center/secure-proxy.mjs
+          node --check railway/control-center/beta-banner.mjs
+          node --check railway/beta-gateway/server.mjs
+          node --check railway/beta-gateway/policy.mjs
+          node --test railway/control-center/beta-banner.test.mjs
+          node --test railway/beta-gateway/server.test.mjs
 
       - name: Scan repository contents for secrets
         run: |
@@ -52,6 +57,7 @@ jobs:
           - superposition
           - superposition-seed
           - postgres-backup
+          - beta-gateway
     steps:
       - uses: actions/checkout@v4
 

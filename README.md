@@ -8,6 +8,16 @@ The deployable bundle lives in `railway/`. Runtime credentials, encryption keys,
 
 Customer-facing test-mode onboarding is documented in [`docs/SANDBOX_QUICKSTART.md`](docs/SANDBOX_QUICKSTART.md). It explicitly stays inside the current beta boundary and includes the Stripe CLI payment, webhook, and partial-refund verification path.
 
+## Public beta boundary
+
+The public API endpoint is the policy gateway at
+`https://beta-gateway-production.up.railway.app`. The underlying router has no
+public Railway domain and is reachable only over Railway private networking.
+The gateway allows the tested Stripe sandbox path while rejecting live Stripe
+credentials, new non-Stripe connectors, and payment requests containing inline
+connector credentials. It is a temporary public sandbox boundary, not a claim
+that this deployment is ready to process real customer money.
+
 ## Patched router provenance
 
 The production router is based on upstream Hyperswitch commit `5b9f9a52038e3420d496fdc04c19f6dcd49d9474` with one reviewed patch:
@@ -34,9 +44,10 @@ The pinned Juspay Web SDK and control-center bases are mirrored into the same GH
 
 `.github/workflows/smoke.yml` schedules an external synthetic check every 15 minutes and can also be triggered manually. GitHub may delay scheduled dispatches, so this is baseline monitoring rather than a strict 15-minute SLA. It verifies:
 
-- the router health response body;
+- the protected gateway's router health response and beta-mode header;
+- the published beta policy;
 - that the published Web SDK is present and non-trivial;
-- that the control-center application shell is present;
+- that the control-center application shell and sandbox warning are present;
 - the control center's CSP, HSTS, MIME-sniffing, and frame-denial headers.
 
 The workflow has no repository-token permissions, uses bounded retries and timeouts, and cancels stale overlapping runs. GitHub Actions failures provide a baseline operational signal; connect a dedicated alerting channel before a commercial launch.

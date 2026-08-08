@@ -1,6 +1,8 @@
 import http from "node:http";
 import { spawn } from "node:child_process";
 
+import { injectBetaBanner } from "./beta-banner.mjs";
+
 const publicPort = Number.parseInt(process.env.PORT ?? "9001", 10);
 const upstreamPort = Number.parseInt(
   process.env.CONTROL_CENTER_UPSTREAM_PORT ?? "9000",
@@ -41,6 +43,7 @@ const proxy = http.createServer((request, response) => {
       method: request.method,
       headers: {
         ...request.headers,
+        "accept-encoding": "identity",
         "x-forwarded-host": request.headers.host ?? "",
         "x-forwarded-proto": "https",
       },
@@ -48,8 +51,16 @@ const proxy = http.createServer((request, response) => {
     (upstreamResponse) => {
       response.statusCode = upstreamResponse.statusCode ?? 502;
 
+      const contentType = String(upstreamResponse.headers["content-type"] ?? "");
+      const shouldInjectBanner =
+        response.statusCode === 200 && contentType.toLowerCase().includes("text/html");
+
       for (const [name, value] of Object.entries(upstreamResponse.headers)) {
-        if (value !== undefined && !blockedUpstreamHeaders.has(name)) {
+        if (
+          value !== undefined &&
+          !blockedUpstreamHeaders.has(name) &&
+          (!shouldInjectBanner || !["content-length", "etag"].includes(name))
+        ) {
           response.setHeader(name, value);
         }
       }
@@ -58,7 +69,21 @@ const proxy = http.createServer((request, response) => {
         response.setHeader(name, value);
       }
 
-      upstreamResponse.pipe(response);
+      if (!shouldInjectBanner) {
+        upstreamResponse.pipe(response);
+        return;
+      }
+
+      const chunks = [];
+      upstreamResponse.on("data", (chunk) => chunks.push(chunk));
+      upstreamResponse.on("end", () => {
+        const source = Buffer.concat(chunks).toString("utf8");
+        const html = injectBetaBanner(source, process.env.BETA_GUIDE_URL);
+        const body = Buffer.from(html);
+        response.setHeader("Content-Length", String(body.length));
+        response.setHeader("Cache-Control", "no-store");
+        response.end(body);
+      });
     },
   );
 
