@@ -30,7 +30,7 @@ The pinned Juspay Web SDK and control-center bases are mirrored into the same GH
 
 ## Production smoke monitoring
 
-`.github/workflows/smoke.yml` performs an external synthetic check every 15 minutes and can also be triggered manually. It verifies:
+`.github/workflows/smoke.yml` schedules an external synthetic check every 15 minutes and can also be triggered manually. GitHub may delay scheduled dispatches, so this is baseline monitoring rather than a strict 15-minute SLA. It verifies:
 
 - the router health response body;
 - that the published Web SDK is present and non-trivial;
