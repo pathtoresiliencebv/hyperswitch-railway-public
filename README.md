@@ -27,3 +27,14 @@ Use the manual `Publish patched router core` workflow only when rebuilding the R
 Router migrations are intentionally not duplicated in Git. Run `railway/router/prepare-context.sh` before a local router-wrapper build; CI runs it automatically and fetches migrations from the same pinned upstream commit.
 
 The pinned Juspay Web SDK and control-center bases are mirrored into the same GHCR package. Their wrapper Dockerfiles use the mirrored digests, avoiding `docker.juspay.io` rate limits without changing the vendor image contents.
+
+## Production smoke monitoring
+
+`.github/workflows/smoke.yml` performs an external synthetic check every 15 minutes and can also be triggered manually. It verifies:
+
+- the router health response body;
+- that the published Web SDK is present and non-trivial;
+- that the control-center application shell is present;
+- the control center's CSP, HSTS, MIME-sniffing, and frame-denial headers.
+
+The workflow has no repository-token permissions, uses bounded retries and timeouts, and cancels stale overlapping runs. GitHub Actions failures provide a baseline operational signal; connect a dedicated alerting channel before a commercial launch.

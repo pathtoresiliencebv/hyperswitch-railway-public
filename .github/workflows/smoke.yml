@@ -1,0 +1,73 @@
+name: Production smoke checks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/smoke.yml
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  public-endpoints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify router, Web SDK, and control center
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          temporary_directory="$(mktemp -d)"
+          trap 'rm -rf "$temporary_directory"' EXIT
+
+          curl_options=(
+            --fail-with-body
+            --silent
+            --show-error
+            --location
+            --retry 3
+            --retry-all-errors
+            --connect-timeout 10
+            --max-time 45
+          )
+
+          curl "${curl_options[@]}" \
+            --output "$temporary_directory/router-health.txt" \
+            https://router-production-32a7.up.railway.app/health
+          grep --fixed-strings --quiet 'health is good' \
+            "$temporary_directory/router-health.txt"
+
+          curl "${curl_options[@]}" \
+            --output "$temporary_directory/HyperLoader.js" \
+            https://web-production-feaf3.up.railway.app/HyperLoader.js
+          test "$(wc -c < "$temporary_directory/HyperLoader.js")" -gt 1000000
+
+          curl "${curl_options[@]}" \
+            --dump-header "$temporary_directory/control-center.headers" \
+            --output "$temporary_directory/control-center.html" \
+            https://control-center-production-403b.up.railway.app/
+          grep --fixed-strings --quiet '<div id="app">' \
+            "$temporary_directory/control-center.html"
+
+          tr '[:upper:]' '[:lower:]' \
+            < "$temporary_directory/control-center.headers" \
+            > "$temporary_directory/control-center.headers.lower"
+          for required_header in \
+            'content-security-policy:' \
+            'strict-transport-security:' \
+            'x-content-type-options: nosniff' \
+            'x-frame-options: deny'; do
+            grep --fixed-strings --quiet "$required_header" \
+              "$temporary_directory/control-center.headers.lower"
+          done
+
+          printf 'All production smoke checks passed.\n'
