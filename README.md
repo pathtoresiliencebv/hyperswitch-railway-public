@@ -6,6 +6,8 @@ This repository contains the non-secret, reproducible deployment source for the 
 
 The deployable bundle lives in `railway/`. Runtime credentials, encryption keys, database URLs, PSP credentials, and service URLs remain Railway variables and must never be committed here.
 
+Customer-facing test-mode onboarding is documented in [`docs/SANDBOX_QUICKSTART.md`](docs/SANDBOX_QUICKSTART.md). It explicitly stays inside the current beta boundary and includes the Stripe CLI payment, webhook, and partial-refund verification path.
+
 ## Patched router provenance
 
 The production router is based on upstream Hyperswitch commit `5b9f9a52038e3420d496fdc04c19f6dcd49d9474` with one reviewed patch:
