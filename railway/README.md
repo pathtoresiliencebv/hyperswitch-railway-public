@@ -41,10 +41,10 @@ Public endpoints:
 Runtime image tags:
 
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:router-core-5b9f9a5-refund-fix`
-- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:router-20260807-stripe-refund-fix`
+- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:router-c37c1a814a3b4e3a3cc471011bbb5a140c2034e0`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:web-20260715-railway-hostfix`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:control-center-20260808-beta-v2`
-- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:beta-gateway-20260808-v1`
+- `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:beta-gateway-c37c1a814a3b4e3a3cc471011bbb5a140c2034e0`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:postgres-backup-20260807-v3`
 
 Current deployment verification on 2026-08-30:
@@ -52,6 +52,8 @@ Current deployment verification on 2026-08-30:
 - All nine expected services reached Railway `SUCCESS`: PostgreSQL, Redis, Superposition, seed job, private router, policy gateway, Web SDK, control center, and backup job.
 - `curl https://beta-gateway-production.up.railway.app/health` returned `200`, `health is good`, and `X-Hyperswitch-Beta-Mode: stripe-test-only`.
 - `/beta-policy` reports `stripe_test_only`; a fake `sk_live_` connector request was rejected before the private router with `403 beta_live_credential_blocked`.
+- VGS EU is selected but deliberately inactive: `/beta-policy` reports `external_vault=vgs_eu_pending`, `VGS_EU_SANDBOX_ENABLED=false` is set on the gateway, and a fake VGS connector request was rejected before the router with `403 beta_vgs_eu_not_enabled`.
+- Commit `c37c1a814a3b4e3a3cc471011bbb5a140c2034e0` passed the GitHub verification, JavaScript tests, Gitleaks scan, and image publication. Railway router deployment `19ef47f7-b595-4e81-bffe-d55ba5bf7aee` and gateway deployment `05064423-95fa-4a64-b960-436ec1960a88` reached `SUCCESS`; post-deploy external smoke run `33337166095` passed.
 - `https://web-production-74a9a.up.railway.app/HyperLoader.js` returned `200` and 4,134,119 bytes.
 - `https://control-center-production-c0d3.up.railway.app` returned `200`, included the persistent `Sandbox beta` warning, and returned CSP, HSTS, MIME-sniffing, and frame-denial headers.
 - Router migrations completed and the server listened on private port `8080`; Superposition returned healthy and the seed job logged `Seeding complete!`.
@@ -131,7 +133,7 @@ Railway dashboard:
 
 ## Production boundary
 
-The platform and tenant onboarding are live as a controlled sandbox beta. Stripe test mode has been proven for payment, signed webhook delivery, and a Hyperswitch-initiated partial refund. The public gateway intentionally prevents merchants from configuring live Stripe credentials or creating other connector types. Never commit PSP credentials to this bundle; store test credentials through the control center.
+The platform and tenant onboarding are live as a controlled sandbox beta. Stripe test mode has been proven for payment, signed webhook delivery, and a Hyperswitch-initiated partial refund. The public gateway intentionally prevents merchants from configuring live Stripe credentials or creating connector types other than Stripe test and the still-gated VGS EU vault path. Never commit PSP credentials to this bundle; store test credentials through the control center.
 
 The intended commercial architecture is reduced-scope payment orchestration for mid-size merchants using VGS EU as the selected third-party PCI-compliant vault. Cardholder data must be collected and tokenized by VGS; the Railway router may receive only vault tokens and non-sensitive orchestration data. This reduces PCI scope but is not, by itself, a compliance certificate or a truthful basis for claiming "non-PCI." The current mock locker is test-only and must never receive real PAN or CVV data.
 

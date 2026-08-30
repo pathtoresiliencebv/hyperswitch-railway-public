@@ -73,3 +73,19 @@ Record the VGS vault region, service-account ID (never its secret), connector
 account ID, disposable merchant/profile IDs, Railway deployment IDs, timestamps,
 HTTP results, VGS request IDs, negative data scans, and cleanup readback. A green
 build or a Railway `SUCCESS` status alone is not proof that the vault flow works.
+
+## Railway preparation evidence: 2026-08-30
+
+- Source commit: `c37c1a814a3b4e3a3cc471011bbb5a140c2034e0`.
+- GitHub verify and image-publication run: `33336975081` (`SUCCESS`).
+- Router deployment: `19ef47f7-b595-4e81-bffe-d55ba5bf7aee` (`SUCCESS`).
+- Gateway deployment: `05064423-95fa-4a64-b960-436ec1960a88` (`SUCCESS`).
+- Post-deploy external smoke run: `33337166095` (`SUCCESS`).
+- Public readback: `/beta-policy` returned `external_vault=vgs_eu_pending`.
+- Negative readback: fake VGS connector creation returned
+  `403 beta_vgs_eu_not_enabled`; a fake live Stripe key still returned
+  `403 beta_live_credential_blocked`.
+- Network readback: the router has no public domain and no TCP proxy.
+- Remaining hard blocker: router startup still reports
+  `Unified Connector Service config is missing`. No VGS account, credentials,
+  alias operation, PAN, CVV, or paid/live transaction has been used.
