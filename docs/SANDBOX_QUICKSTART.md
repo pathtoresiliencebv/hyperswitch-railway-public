@@ -4,11 +4,15 @@ This guide is for the current public **test-mode beta**. It is not permission to
 
 ## Current endpoints
 
-- Control center: <https://control-center-production-403b.up.railway.app>
+- Control center: <https://control-center-production-c0d3.up.railway.app>
 - Protected API gateway: <https://beta-gateway-production.up.railway.app>
-- Web SDK: <https://web-production-feaf3.up.railway.app/HyperLoader.js>
+- Web SDK: <https://web-production-74a9a.up.railway.app/HyperLoader.js>
 
-These are temporary Railway domains. The API gateway rejects live Stripe credentials, non-Stripe connector creation, and inline connector credentials. Transactional email and password-reset delivery are not operational yet, so use an address and password you can retain safely.
+These are temporary Railway domains. The API gateway rejects live Stripe
+credentials, non-Stripe connector creation, inline connector credentials, and
+raw card fields on all payment mutations. Do not submit card numbers or CVCs to
+this API. Transactional email and password-reset delivery are not operational
+yet, so use an address and password you can retain safely.
 
 ## 1. Create your tenant
 

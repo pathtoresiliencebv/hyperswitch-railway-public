@@ -48,10 +48,19 @@ tested flow actually needs. Do not grant broad administrative permissions.
    Connector Service privately and connect the router path required by
    `/confirm-intent/external-vault-proxy`. Router logs confirm the connection;
    the previous missing-UCS warning is gone.
-4. Configure VGS Collect for `sandbox-eu-1`. PAN, expiry, and CVV must travel
-   directly from VGS-controlled fields to VGS. HyperSwitch, Railway, browser
-   analytics, support tooling, and application logs may receive only aliases and
-   non-sensitive context. CVV aliases must be volatile.
+4. Configure VGS Collect for `sandbox-eu-1`. Load Collect.js 3.3.0 from
+   `https://js.verygoodvault.com/vgs-collect/3.3.0/vgs-collect.js` with its
+   published Subresource Integrity value
+   `sha384-YXvleED0q049Gx5rqUHI/hOTud/jKaLiL757lVq26oVFAd9SjTDHBoOviWw6XmPo`.
+   PAN, expiry, and CVV must travel directly from VGS-controlled iframe fields
+   to VGS. Configure every sensitive field with VGS `UUID` tokenization so the
+   result is a
+   `tok_sandbox_...` alias; format-preserving aliases are intentionally rejected
+   by the public gateway because they cannot be distinguished safely from raw
+   card values. Set CVV alias storage to `VOLATILE`. HyperSwitch, Railway,
+   browser analytics, support tooling, and application logs may receive only
+   aliases and non-sensitive context. The browser may receive a short-lived VGS
+   OAuth access token from a backend endpoint, but never the VGS client secret.
 5. Create the VGS `vault_processor` connector using the mapping above, attach it
    to one disposable QA merchant/profile. Put its verified vault ID in
    `VGS_EU_SANDBOX_VAULT_IDS`, then enable `VGS_EU_SANDBOX_ENABLED=true` only for
@@ -66,6 +75,20 @@ tested flow actually needs. Do not grant broad administrative permissions.
 8. Disable the flag after the test unless the complete QA evidence and security
    review are accepted. Live activation requires a separate change, separate
    live credentials, explicit approval, and a fresh end-to-end proof.
+
+The gateway applies this rule to all `POST`, `PUT`, and `PATCH` mutations below
+`/payments` and `/v2/payments`, including v1 confirm and v2
+`confirm-intent/external-vault-proxy`. It blocks recursively nested inline
+connector credentials, Stripe live-key patterns, ordinary raw `card` variants,
+VGS aliases while the rollout flag is disabled, and non-UUID external-vault
+values after activation. Stored Stripe test processor tokens remain supported.
+
+## Implementation references
+
+- [VGS Collect.js integration](https://docs.verygoodsecurity.com/vault/developer-tools/vgs-collect/js/integration)
+- [VGS Collect tokenization API](https://docs.verygoodsecurity.com/vault/developer-tools/vgs-collect/js/collect-tokenization-api)
+- [VGS vault APIs and regions](https://docs.verygoodsecurity.com/vault/developer-tools/apis/vault-apis-and-region)
+- [HyperSwitch external-vault connector flow](https://docs.hyperswitch.io/integration-guide/workflows/vault/connect-external-vaults-to-hyperswitch-orchestration)
 
 ## Release evidence
 

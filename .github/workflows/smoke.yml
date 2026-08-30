@@ -74,6 +74,10 @@ jobs:
             "$temporary_directory/beta-policy.json"
           grep --fixed-strings --quiet '"live_credentials":"blocked"' \
             "$temporary_directory/beta-policy.json"
+          grep --fixed-strings --quiet '"raw_card_data":"blocked"' \
+            "$temporary_directory/beta-policy.json"
+          grep --fixed-strings --quiet '"vgs_alias_format":"uuid_only"' \
+            "$temporary_directory/beta-policy.json"
 
           curl "${curl_options[@]}" \
             --output "$temporary_directory/HyperLoader.js" \

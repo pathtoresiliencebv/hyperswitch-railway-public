@@ -80,6 +80,8 @@ export function createBetaGateway({
           inline_connector_credentials: "blocked",
           live_credentials: "blocked",
           mode: "sandbox_beta",
+          raw_card_data: "blocked",
+          vgs_alias_format: "uuid_only",
         });
         return;
       }

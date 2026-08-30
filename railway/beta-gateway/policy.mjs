@@ -2,20 +2,32 @@ const connectorCreateV1 = /^\/account\/[^/]+\/connectors\/?$/;
 const connectorUpdateV1 = /^\/account\/[^/]+\/connectors\/[^/]+\/?$/;
 const connectorCreateV2 = /^\/v2\/connector-accounts\/?$/;
 const connectorUpdateV2 = /^\/v2\/connector-accounts\/[^/]+\/?$/;
-const paymentCreate = /^\/(?:v2\/)?payments\/?$/;
+const paymentPath = /^\/(?:v2\/)?payments(?:\/|$)/;
 
 const liveCredentialPattern = /(?:^|[^a-z0-9])(?:sk|rk|pk)_live_[a-z0-9]+/i;
 const stripeTestKeyPattern = /^(?:sk|rk)_test_[A-Za-z0-9_]+$/;
+const vgsSandboxAliasPattern = /^tok_sandbox_[A-Za-z0-9_-]+$/;
+const paymentMutationMethods = new Set(["PATCH", "POST", "PUT"]);
+const fullVaultCardVariants = new Set([
+  "proxy_card",
+  "vault_card",
+  "vault_data_card",
+]);
+const optionalCvcVaultCardVariants = new Set([
+  "vault_card_token",
+  "vault_card_token_data",
+]);
+const requiredCvcVaultCardVariants = new Set(["vault_token"]);
 
 export function requestNeedsPolicyInspection(method, pathname) {
   const normalizedMethod = method.toUpperCase();
 
   return (
+    isPaymentMutation(normalizedMethod, pathname) ||
     (normalizedMethod === "POST" &&
       (connectorCreateV1.test(pathname) ||
         connectorUpdateV1.test(pathname) ||
-        connectorCreateV2.test(pathname) ||
-        paymentCreate.test(pathname))) ||
+        connectorCreateV2.test(pathname))) ||
     (normalizedMethod === "PUT" && connectorUpdateV2.test(pathname))
   );
 }
@@ -35,12 +47,36 @@ export function evaluateBetaPolicy(
     );
   }
 
-  if (paymentCreate.test(pathname) && normalizedMethod === "POST") {
-    if (hasOwn(payload, "merchant_connector_details")) {
+  if (isPaymentMutation(normalizedMethod, pathname)) {
+    if (containsProperty(payload, "merchant_connector_details")) {
       return reject(
         "beta_inline_credentials_blocked",
         "Inline connector credentials are blocked. Use a stored Stripe test connector.",
       );
+    }
+
+    if (containsRawCardVariant(payload)) {
+      return reject(
+        "beta_raw_card_data_blocked",
+        "Raw card payloads are blocked. Use a stored processor token or VGS Collect aliases.",
+      );
+    }
+
+    const externalVaultCards = findExternalVaultCards(payload);
+    if (externalVaultCards.length > 0) {
+      if (!vgsEuSandboxEnabled) {
+        return reject(
+          "beta_vgs_eu_not_enabled",
+          "VGS EU sandbox aliases are blocked until the controlled rollout is activated.",
+        );
+      }
+
+      if (externalVaultCards.some((entry) => !hasValidVgsAliases(entry))) {
+        return reject(
+          "beta_vgs_alias_required",
+          "External-vault card fields must contain UUID-style VGS sandbox aliases; raw or format-preserving card values are blocked.",
+        );
+      }
     }
 
     return allow();
@@ -198,6 +234,94 @@ function containsLiveCredential(value) {
   }
 
   return false;
+}
+
+function isPaymentMutation(method, pathname) {
+  return paymentMutationMethods.has(method) && paymentPath.test(pathname);
+}
+
+function containsProperty(value, property) {
+  if (Array.isArray(value)) {
+    return value.some((item) => containsProperty(item, property));
+  }
+
+  if (value !== null && typeof value === "object") {
+    return (
+      hasOwn(value, property) ||
+      Object.values(value).some((item) => containsProperty(item, property))
+    );
+  }
+
+  return false;
+}
+
+function containsRawCardVariant(value) {
+  if (Array.isArray(value)) {
+    return value.some(containsRawCardVariant);
+  }
+
+  if (value !== null && typeof value === "object") {
+    if (
+      hasOwn(value, "card") &&
+      value.card !== null &&
+      typeof value.card === "object" &&
+      ["card_number", "card_exp_month", "card_exp_year", "card_cvc"].some(
+        (field) => hasOwn(value.card, field),
+      )
+    ) {
+      return true;
+    }
+
+    return Object.values(value).some(containsRawCardVariant);
+  }
+
+  return false;
+}
+
+function findExternalVaultCards(value, entries = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) findExternalVaultCards(item, entries);
+    return entries;
+  }
+
+  if (value !== null && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      if (
+        (fullVaultCardVariants.has(key) ||
+          optionalCvcVaultCardVariants.has(key) ||
+          requiredCvcVaultCardVariants.has(key)) &&
+        item !== null &&
+        typeof item === "object" &&
+        !Array.isArray(item)
+      ) {
+        entries.push({ data: item, variant: key });
+      } else {
+        findExternalVaultCards(item, entries);
+      }
+    }
+  }
+
+  return entries;
+}
+
+function hasValidVgsAliases({ data, variant }) {
+  const requiredFields = fullVaultCardVariants.has(variant)
+    ? ["card_number", "card_exp_month", "card_exp_year", "card_cvc"]
+    : requiredCvcVaultCardVariants.has(variant)
+      ? ["card_cvc"]
+      : [];
+
+  if (requiredFields.some((field) => !isVgsSandboxAlias(data[field]))) {
+    return false;
+  }
+
+  return ["card_cvc", "card_holder_name"]
+    .filter((field) => hasOwn(data, field) && data[field] !== null)
+    .every((field) => isVgsSandboxAlias(data[field]));
+}
+
+function isVgsSandboxAlias(value) {
+  return typeof value === "string" && vgsSandboxAliasPattern.test(value);
 }
 
 function hasOwn(value, property) {
