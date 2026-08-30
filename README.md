@@ -53,7 +53,9 @@ The pinned Juspay Web SDK and control-center bases are mirrored into the same GH
 
 `.github/workflows/smoke.yml` schedules an external synthetic check every 15 minutes and can also be triggered manually. GitHub may delay scheduled dispatches, so this is baseline monitoring rather than a strict 15-minute SLA. It verifies:
 
-- the protected gateway's router health response and beta-mode header;
+- the protected gateway's shallow router health response and beta-mode header;
+- deep router readiness for PostgreSQL, Redis, SQLx analytics, outbound HTTP,
+  and the private Unified Connector Service;
 - the published beta policy;
 - that the published Web SDK is present and non-trivial;
 - that the control-center application shell and sandbox warning are present;

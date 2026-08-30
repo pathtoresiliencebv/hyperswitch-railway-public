@@ -58,7 +58,7 @@ Current deployment verification on 2026-08-30:
 - VGS EU is selected but deliberately inactive: `/beta-policy` reports `external_vault=vgs_eu_pending`, `VGS_EU_SANDBOX_ENABLED=false` is set on the gateway, and a fake VGS connector request was rejected before the router with `403 beta_vgs_eu_not_enabled`.
 - Commit `c37c1a814a3b4e3a3cc471011bbb5a140c2034e0` passed the GitHub verification, JavaScript tests, Gitleaks scan, and image publication. Railway UCS deployment `b9b655e0-121d-4c39-b690-5713732f9137`, router deployment `075a734f-50cf-4cce-b403-df55515944e7`, and gateway deployment `05064423-95fa-4a64-b960-436ec1960a88` reached `SUCCESS`; post-deploy external smoke run `33337166095` passed.
 - UCS logs report gRPC listening on private port `8000`, metrics on `8080`, Kafka disabled, and raw connector data disabled. The redeployed router logs report `Successfully connected to Unified Connector Service`; the previous missing-UCS warning is gone.
-- The router's deep `/health/ready` endpoint still returns `HE_00` because the optional SQLx analytics health check is not configured. The public `/health` route and all Railway service health checks pass; this remaining analytics failure is a production-readiness gate, not proof of a VGS transaction.
+- Router deployment `71804ab0-3974-4273-952d-dc8cf8d91ee3` reached `SUCCESS` after its SQLx analytics client was connected to the same private PostgreSQL service through Railway reference variables. `/health/ready` then returned `200` with `database`, `redis`, `analytics`, `outgoing_request`, and `unified_connector_service` all `true`.
 - `https://web-production-74a9a.up.railway.app/HyperLoader.js` returned `200` and 4,134,119 bytes.
 - `https://control-center-production-c0d3.up.railway.app` returned `200`, included the persistent `Sandbox beta` warning, and returned CSP, HSTS, MIME-sniffing, and frame-denial headers.
 - Router migrations completed and the server listened on private port `8080`; Superposition returned healthy and the seed job logged `Seeding complete!`.
@@ -135,6 +135,25 @@ The encryption key currently lives only as a Railway service variable. Escrow it
 Railway dashboard:
 
 - `https://railway.com/project/065c038f-c543-409f-8bfb-1286268c27b0?environmentId=27336871-095d-4dfd-ade7-43cf5ecd3cb7`
+
+### Router deep-readiness variables
+
+The router image contains non-secret development placeholders under
+`[analytics.sqlx]`. Railway must override them so OLAP analytics and the deep
+readiness check use the existing private PostgreSQL service. Configure these as
+Railway reference variables on the `router` service:
+
+| Variable | Railway value |
+| --- | --- |
+| `ROUTER__ANALYTICS__SQLX__USERNAME` | `${{Postgres.POSTGRES_USER}}` |
+| `ROUTER__ANALYTICS__SQLX__PASSWORD` | `${{Postgres.POSTGRES_PASSWORD}}` |
+| `ROUTER__ANALYTICS__SQLX__HOST` | `${{Postgres.RAILWAY_PRIVATE_DOMAIN}}` |
+| `ROUTER__ANALYTICS__SQLX__PORT` | `5432` |
+| `ROUTER__ANALYTICS__SQLX__DBNAME` | `${{Postgres.POSTGRES_DB}}` |
+
+The scheduled public smoke workflow asserts the deep readiness fields instead
+of relying only on the shallow `/health` response. Do not claim readiness if
+that workflow or `/health/ready` fails.
 
 ## Production boundary
 

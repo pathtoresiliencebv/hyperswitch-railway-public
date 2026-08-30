@@ -55,6 +55,17 @@ jobs:
             "$temporary_directory/gateway-health.headers.lower"
 
           curl "${curl_options[@]}" \
+            --output "$temporary_directory/router-readiness.json" \
+            https://beta-gateway-production.up.railway.app/health/ready
+          jq --exit-status '
+            .database == true and
+            .redis == true and
+            .analytics == true and
+            .outgoing_request == true and
+            .unified_connector_service == true
+          ' "$temporary_directory/router-readiness.json" > /dev/null
+
+          curl "${curl_options[@]}" \
             --output "$temporary_directory/beta-policy.json" \
             https://beta-gateway-production.up.railway.app/beta-policy
           grep --fixed-strings --quiet '"connectors":"stripe_test_only"' \

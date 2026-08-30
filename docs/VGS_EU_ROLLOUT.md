@@ -86,6 +86,10 @@ build or a Railway `SUCCESS` status alone is not proof that the vault flow works
 - Router deployment after UCS configuration:
   `075a734f-50cf-4cce-b403-df55515944e7` (`SUCCESS`). Router logs report
   `Successfully connected to Unified Connector Service`.
+- Router readiness deployment after private SQLx analytics configuration:
+  `71804ab0-3974-4273-952d-dc8cf8d91ee3` (`SUCCESS`). Public readback from
+  `/health/ready` returned `200` with database, Redis, analytics, outgoing
+  request, and Unified Connector Service checks all `true`.
 - Gateway deployment: `05064423-95fa-4a64-b960-436ec1960a88` (`SUCCESS`).
 - Post-deploy external smoke run: `33337166095` (`SUCCESS`).
 - Public readback: `/beta-policy` returned `external_vault=vgs_eu_pending`.
