@@ -143,6 +143,24 @@ build or a Railway `SUCCESS` status alone is not proof that the vault flow works
   `403 beta_vgs_eu_not_enabled`, and `403 beta_live_credential_blocked` before
   router authentication. Railway HTTP logs contained only method, path, status,
   and duration; no request bodies or credentials were logged.
+- A follow-up ingress audit found the v1 `/payment_methods` and
+  `/payment_methods/tokenize-card` paths plus future v2 payment-method-session
+  and generic-tokenization paths. Final policy commit
+  `6f33546416ceb650f9eb2a1bfa5d3c918bceb671` closes those routes as well.
+  Verification, 38 automated tests, Gitleaks, and image publication completed
+  in GitHub Actions run `33339313646` (`SUCCESS`).
+- Definitive gateway deployment:
+  `bb772047-cb81-48ae-81c0-0bd5280fcf73` (`SUCCESS`), using image
+  `beta-gateway-6f33546416ceb650f9eb2a1bfa5d3c918bceb671` and Railway health
+  check `/health/ready`.
+- Public negative readback additionally proved raw payment-method creation,
+  raw tokenize-card, decrypted-wallet PAN, and generic v2 tokenization all
+  return the expected gateway `403` before router authentication. A
+  stored-processor-token-shaped request passed the gateway and reached the
+  router's normal authentication boundary (`400 IR_04` without an API key).
+- Final external smoke run `33339456588` completed successfully against the
+  gateway, deep readiness endpoint, Web SDK, control center, and security
+  headers.
 - Network readback: the router and UCS have no public domain and no TCP proxy.
 - Remaining hard blocker: no VGS EU sandbox account, verified EU vault,
   least-privilege service account, or VGS Collect integration is available yet.
