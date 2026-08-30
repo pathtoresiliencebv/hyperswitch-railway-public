@@ -8,6 +8,8 @@ let gateway;
 let gatewayUrl;
 let upstream;
 let upstreamUrl;
+let vgsGateway;
+let vgsGatewayUrl;
 const receivedRequests = [];
 
 before(async () => {
@@ -28,10 +30,18 @@ before(async () => {
   gateway = createBetaGateway({ upstreamUrl });
   await listen(gateway);
   gatewayUrl = serverUrl(gateway);
+
+  vgsGateway = createBetaGateway({
+    upstreamUrl,
+    vgsEuSandboxEnabled: true,
+    vgsEuSandboxVaultIds: ["sandbox_eu_vault_id"],
+  });
+  await listen(vgsGateway);
+  vgsGatewayUrl = serverUrl(vgsGateway);
 });
 
 after(async () => {
-  await Promise.all([close(gateway), close(upstream)]);
+  await Promise.all([close(gateway), close(vgsGateway), close(upstream)]);
 });
 
 test("reports gateway health", async () => {
@@ -48,10 +58,24 @@ test("publishes the machine-readable beta restrictions", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
     connectors: "stripe_test_only",
+    external_vault: "vgs_eu_pending",
     inline_connector_credentials: "blocked",
     live_credentials: "blocked",
     mode: "sandbox_beta",
   });
+});
+
+test("reports VGS EU sandbox when its rollout gate is enabled", async () => {
+  const response = await fetch(`${vgsGatewayUrl}/beta-policy`);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).external_vault, "vgs_eu_sandbox");
+});
+
+test("refuses to start VGS without a verified EU vault allowlist", () => {
+  assert.throws(
+    () => createBetaGateway({ upstreamUrl, vgsEuSandboxEnabled: true }),
+    /VGS_EU_SANDBOX_VAULT_IDS/,
+  );
 });
 
 test("forwards a valid Stripe test connector", async () => {
@@ -99,6 +123,82 @@ test("blocks non-Stripe connector creation", async () => {
   assert.equal(receivedRequests.length, beforeCount);
 });
 
+test("blocks VGS before the EU sandbox rollout gate is enabled", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest("/account/merchant/connectors", vgsPayload());
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_vgs_eu_not_enabled");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("forwards a valid VGS EU sandbox vault connector when enabled", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest(
+    "/account/merchant/connectors",
+    vgsPayload(),
+    vgsGatewayUrl,
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(receivedRequests.length, beforeCount + 1);
+});
+
+test("rejects VGS configured as a payment processor", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest(
+    "/account/merchant/connectors",
+    vgsPayload({ connector_type: "payment_processor" }),
+    vgsGatewayUrl,
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(
+    (await response.json()).error.code,
+    "beta_vgs_vault_processor_required",
+  );
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("rejects incomplete VGS SignatureKey credentials", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest(
+    "/account/merchant/connectors",
+    vgsPayload({
+      connector_account_details: {
+        api_key: "sandbox_service_account_id",
+        auth_type: "SignatureKey",
+        key1: "",
+      },
+    }),
+    vgsGatewayUrl,
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_vgs_credentials_required");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("rejects a VGS vault outside the verified EU sandbox allowlist", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest(
+    "/account/merchant/connectors",
+    vgsPayload({
+      connector_account_details: {
+        api_key: "sandbox_service_account_id",
+        api_secret: "unverified_vault_id",
+        auth_type: "SignatureKey",
+        key1: "sandbox_service_account_password",
+      },
+    }),
+    vgsGatewayUrl,
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_vgs_eu_vault_not_allowed");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
 test("allows a webhook-only connector update", async () => {
   const beforeCount = receivedRequests.length;
   const response = await jsonRequest(
@@ -136,12 +236,27 @@ test("proxies ordinary API requests", async () => {
   assert.deepEqual(await response.json(), { upstream: true });
 });
 
-function jsonRequest(pathname, payload) {
-  return fetch(`${gatewayUrl}${pathname}`, {
+function jsonRequest(pathname, payload, baseUrl = gatewayUrl) {
+  return fetch(`${baseUrl}${pathname}`, {
     body: JSON.stringify(payload),
     headers: { "content-type": "application/json" },
     method: "POST",
   });
+}
+
+function vgsPayload(overrides = {}) {
+  return {
+    connector_account_details: {
+      api_key: "sandbox_service_account_id",
+      api_secret: "sandbox_eu_vault_id",
+      auth_type: "SignatureKey",
+      key1: "sandbox_service_account_password",
+    },
+    connector_name: "vgs",
+    connector_type: "vault_processor",
+    test_mode: true,
+    ...overrides,
+  };
 }
 
 function listen(server) {

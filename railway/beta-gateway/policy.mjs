@@ -20,7 +20,12 @@ export function requestNeedsPolicyInspection(method, pathname) {
   );
 }
 
-export function evaluateBetaPolicy(method, pathname, payload) {
+export function evaluateBetaPolicy(
+  method,
+  pathname,
+  payload,
+  { vgsEuSandboxEnabled = false, vgsEuSandboxVaultIds = [] } = {},
+) {
   const normalizedMethod = method.toUpperCase();
 
   if (containsLiveCredential(payload)) {
@@ -59,9 +64,19 @@ export function evaluateBetaPolicy(method, pathname, payload) {
     );
   }
 
+  const connectorName = String(payload.connector_name ?? "").toLowerCase();
+
+  if (connectorName === "vgs") {
+    return evaluateVgsEuSandboxPolicy(payload, {
+      isCreate,
+      vgsEuSandboxEnabled,
+      vgsEuSandboxVaultIds,
+    });
+  }
+
   if (
     hasOwn(payload, "connector_name") &&
-    String(payload.connector_name).toLowerCase() !== "stripe"
+    connectorName !== "stripe"
   ) {
     return reject(
       "beta_stripe_only",
@@ -91,6 +106,77 @@ export function evaluateBetaPolicy(method, pathname, payload) {
       return reject(
         "beta_stripe_test_key_required",
         "A Stripe test secret beginning with sk_test_ or rk_test_ is required.",
+      );
+    }
+  }
+
+  return allow();
+}
+
+function evaluateVgsEuSandboxPolicy(
+  payload,
+  { isCreate, vgsEuSandboxEnabled, vgsEuSandboxVaultIds },
+) {
+  if (!vgsEuSandboxEnabled) {
+    return reject(
+      "beta_vgs_eu_not_enabled",
+      "VGS EU sandbox is selected but not activated. Add the VGS EU sandbox account through the controlled rollout first.",
+    );
+  }
+
+  if (String(payload.connector_type ?? "").toLowerCase() !== "vault_processor") {
+    return reject(
+      "beta_vgs_vault_processor_required",
+      "VGS must be configured as connector_type=vault_processor.",
+    );
+  }
+
+  const hasAccountDetails = hasOwn(payload, "connector_account_details");
+  if (isCreate || hasAccountDetails) {
+    if (payload.test_mode !== true) {
+      return reject(
+        "beta_test_mode_required",
+        "Connector test_mode=true is required for the VGS EU sandbox.",
+      );
+    }
+
+    const accountDetails = payload.connector_account_details;
+    if (
+      accountDetails === null ||
+      typeof accountDetails !== "object" ||
+      Array.isArray(accountDetails)
+    ) {
+      return reject(
+        "beta_vgs_credentials_required",
+        "VGS EU sandbox credentials must be supplied through connector_account_details.",
+      );
+    }
+
+    if (accountDetails.auth_type !== "SignatureKey") {
+      return reject(
+        "beta_vgs_signature_key_required",
+        "VGS requires connector_account_details.auth_type=SignatureKey.",
+      );
+    }
+
+    const requiredFields = ["api_key", "key1", "api_secret"];
+    if (
+      requiredFields.some(
+        (field) =>
+          typeof accountDetails[field] !== "string" ||
+          accountDetails[field].trim() === "",
+      )
+    ) {
+      return reject(
+        "beta_vgs_credentials_required",
+        "VGS SignatureKey credentials require api_key, key1, and api_secret.",
+      );
+    }
+
+    if (!vgsEuSandboxVaultIds.includes(accountDetails.api_secret)) {
+      return reject(
+        "beta_vgs_eu_vault_not_allowed",
+        "The VGS vault ID is not in the verified EU sandbox allowlist.",
       );
     }
   }

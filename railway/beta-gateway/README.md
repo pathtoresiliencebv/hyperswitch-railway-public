@@ -1,4 +1,4 @@
-# Stripe-test-only beta gateway
+# Sandbox beta policy gateway
 
 This small Node.js reverse proxy is the only public API entry point for the
 current Hyperswitch sandbox beta. Railway private networking connects it to the
@@ -7,7 +7,13 @@ router at `router.railway.internal:8080`.
 The gateway:
 
 - rejects Stripe credentials containing live-mode key prefixes;
-- rejects new non-Stripe connector accounts;
+- rejects connector accounts other than Stripe test and the gated VGS EU path;
+- keeps the selected VGS EU sandbox vault route disabled until
+  `VGS_EU_SANDBOX_ENABLED=true` is set after the activation gates pass;
+- refuses to start in VGS mode unless `VGS_EU_SANDBOX_VAULT_IDS` contains at
+  least one verified EU sandbox vault ID;
+- when enabled, accepts only a VGS `vault_processor` using HyperSwitch's
+  `SignatureKey` credential shape and `test_mode: true`;
 - requires `test_mode: true` when Stripe credentials are configured;
 - rejects inline connector credentials on payment creation;
 - rate-limits requests per client IP;

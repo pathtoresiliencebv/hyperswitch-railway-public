@@ -6,7 +6,7 @@ Services:
 - `router`: Hyperswitch API, runs Diesel migrations on boot, then starts `/local/bin/router`.
 - `web`: Hyperswitch Web SDK.
 - `control-center`: Hyperswitch dashboard with runtime API/SDK URLs injected from Railway variables.
-- `beta-gateway`: public Stripe-test-only policy gateway in front of the private router.
+- `beta-gateway`: public sandbox policy gateway in front of the private router; Stripe test is active and VGS EU sandbox is selected but gated.
 - `superposition`: Superposition demo service used by Hyperswitch config.
 - `superposition-seed`: one-shot seed job for Superposition dimensions and defaults.
 - `postgres-backup`: daily encrypted logical backup job with retention and a reusable restore verifier.
@@ -133,13 +133,13 @@ Railway dashboard:
 
 The platform and tenant onboarding are live as a controlled sandbox beta. Stripe test mode has been proven for payment, signed webhook delivery, and a Hyperswitch-initiated partial refund. The public gateway intentionally prevents merchants from configuring live Stripe credentials or creating other connector types. Never commit PSP credentials to this bundle; store test credentials through the control center.
 
-The intended commercial architecture is non-PCI payment orchestration for mid-size merchants using a third-party PCI-compliant vault such as VGS or TokenEx. Cardholder data must be collected and tokenized by that vault; the Railway router may receive only vault tokens and non-sensitive orchestration data. This reduces PCI scope but is not, by itself, a compliance certificate. The current mock locker is test-only and must never receive real PAN or CVV data.
+The intended commercial architecture is reduced-scope payment orchestration for mid-size merchants using VGS EU as the selected third-party PCI-compliant vault. Cardholder data must be collected and tokenized by VGS; the Railway router may receive only vault tokens and non-sensitive orchestration data. This reduces PCI scope but is not, by itself, a compliance certificate or a truthful basis for claiming "non-PCI." The current mock locker is test-only and must never receive real PAN or CVV data.
 
 The current deployment uses Railway-provided domains. Add owned custom domains and transactional email before presenting this as a fully branded commercial product. The router's `release` feature set includes email support, but the live config still contains the local MailHog SMTP placeholders and Railway has no SMTP/SES variables. Signup works, while email verification and password-reset delivery are not operational until a real transactional-email provider is configured and tested.
 
 Do not call this production-ready for real customers until all four remaining gates are closed:
 
-1. Select and contract the third-party vault, complete tokenization and detokenization integration, document residual PCI scope, and prove that PAN/CVV never reaches the router, logs, database, or support tooling.
+1. Contract VGS for an EU sandbox/data plane, complete tokenization and tightly controlled detokenization integration, document residual PCI scope, and prove that PAN/CVV never reaches the router, logs, database, or support tooling.
 2. Enable Railway PITR and prove a native point-in-time restore. The independent daily encrypted dump and full restore test already provide a second recovery path, but its encryption key still needs external escrow.
 3. Configure owned API, SDK, and control-center domains with final CORS and redirect settings.
 4. Ship transactional email, legal pages, privacy/retention rules, monitoring alerts, and a customer-support process.

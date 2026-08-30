@@ -276,6 +276,7 @@ trustpayments.base_url = "https://webservices.securetrading.net/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 tsys.base_url = "https://stagegw.transnox.com/"
 unified_authentication_service.base_url = "http://localhost:8000"
+# VGS Vault API v2 uses a tenant hostname. The selected vault must be created in sandbox-eu-1.
 vgs.base_url = "https://{{vault_id}}.sandbox.vault-api.verygoodvault.com/"
 vgs.secondary_base_url = "https://auth.verygoodsecurity.com/"
 volt.base_url = "https://gateway.sandbox.volt.io"

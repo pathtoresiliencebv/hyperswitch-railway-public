@@ -23,6 +23,12 @@ export function createBetaGateway({
   upstreamUrl,
   requestTimeoutMs = 60_000,
   rateLimitPerMinute = 240,
+  vgsEuSandboxEnabled = environmentFlagEnabled(
+    process.env.VGS_EU_SANDBOX_ENABLED,
+  ),
+  vgsEuSandboxVaultIds = environmentList(
+    process.env.VGS_EU_SANDBOX_VAULT_IDS,
+  ),
 } = {}) {
   const upstream = new URL(
     upstreamUrl ??
@@ -32,6 +38,12 @@ export function createBetaGateway({
 
   if (upstream.protocol !== "http:") {
     throw new Error("HYPERSWITCH_UPSTREAM_URL must use http inside Railway");
+  }
+
+  if (vgsEuSandboxEnabled && vgsEuSandboxVaultIds.length === 0) {
+    throw new Error(
+      "VGS_EU_SANDBOX_VAULT_IDS must contain a verified EU sandbox vault ID when VGS is enabled",
+    );
   }
 
   const rateLimiter = createRateLimiter(rateLimitPerMinute);
@@ -62,6 +74,9 @@ export function createBetaGateway({
       if (requestUrl.pathname === "/beta-policy") {
         sendJson(response, 200, {
           connectors: "stripe_test_only",
+          external_vault: vgsEuSandboxEnabled
+            ? "vgs_eu_sandbox"
+            : "vgs_eu_pending",
           inline_connector_credentials: "blocked",
           live_credentials: "blocked",
           mode: "sandbox_beta",
@@ -89,6 +104,7 @@ export function createBetaGateway({
           request.method ?? "GET",
           requestUrl.pathname,
           bufferedBody.parsed,
+          { vgsEuSandboxEnabled, vgsEuSandboxVaultIds },
         );
 
         if (!policy.allowed) {
@@ -283,6 +299,17 @@ function publicError(statusCode, code, publicMessage) {
   error.publicMessage = publicMessage;
   error.statusCode = statusCode;
   return error;
+}
+
+function environmentFlagEnabled(value) {
+  return String(value ?? "").trim().toLowerCase() === "true";
+}
+
+function environmentList(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function sendJson(response, statusCode, payload) {

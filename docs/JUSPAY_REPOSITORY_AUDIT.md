@@ -18,7 +18,7 @@ This is a controlled test sandbox. It is not authorization to process live money
 
 ## Chosen commercial architecture: non-PCI orchestration
 
-The target is a SaaS orchestration product for mid-size merchants following HyperSwitch's documented [SaaS orchestration with a third-party vault](https://docs.hyperswitch.io/integration-guide/workflows/vault/deployment-models/saas-orchestration-with-third-party-vault) model, for example with VGS or TokenEx. Cardholder data must flow directly from the vault-controlled collection layer to that vault. HyperSwitch receives vault tokens and non-sensitive payment context, not PAN or CVV.
+The target is a SaaS orchestration product for mid-size merchants following HyperSwitch's documented [SaaS orchestration with a third-party vault](https://docs.hyperswitch.io/integration-guide/workflows/vault/deployment-models/saas-orchestration-with-third-party-vault) model. VGS EU is the selected external vault; TokenEx is no longer the primary path. Cardholder data must flow directly from the VGS-controlled collection layer to VGS. HyperSwitch receives vault tokens and non-sensitive payment context, not PAN or CVV.
 
 This is the only sensible commercial direction for the stated product. Self-hosting `hyperswitch-card-vault` on Railway would drag this company into key custody, vault availability, incident response, recovery, and materially larger PCI obligations. Calling the product “non-PCI” is still shorthand, not a legal fact: the final SDK flow, contracts, merchant responsibilities, SAQ obligations, logs, support access, and the vault provider's attestation must establish the actual residual scope.
 

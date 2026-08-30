@@ -12,15 +12,20 @@ The Juspay organization scan and the deploy/exclude decision for the related
 repositories are documented in
 [`docs/JUSPAY_REPOSITORY_AUDIT.md`](docs/JUSPAY_REPOSITORY_AUDIT.md).
 
+The selected VGS EU rollout and its remaining activation gates are documented
+in [`docs/VGS_EU_ROLLOUT.md`](docs/VGS_EU_ROLLOUT.md).
+
 ## Public beta boundary
 
 The public API endpoint is the policy gateway at
 `https://beta-gateway-production.up.railway.app`. The underlying router has no
 public Railway domain and is reachable only over Railway private networking.
 The gateway allows the tested Stripe sandbox path while rejecting live Stripe
-credentials, new non-Stripe connectors, and payment requests containing inline
-connector credentials. It is a temporary public sandbox boundary, not a claim
-that this deployment is ready to process real customer money.
+credentials, new payment connectors, and payment requests containing inline
+connector credentials. VGS EU is the selected external vault, but its sandbox
+route remains disabled until the documented activation gates pass. This is a
+temporary public sandbox boundary, not a claim that this deployment is ready to
+process real customer money.
 
 ## Patched router provenance
 
