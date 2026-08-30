@@ -125,6 +125,22 @@ build or a Railway `SUCCESS` status alone is not proof that the vault flow works
 - Negative readback: fake VGS connector creation returned
   `403 beta_vgs_eu_not_enabled`; a fake live Stripe key still returned
   `403 beta_live_credential_blocked`.
+- Non-PCI mutation-policy commit:
+  `48f0644376e791d81ae2176532fe7a4db63b9f2e`. Verification, 30 automated
+  gateway/control-center tests, Gitleaks, and image publication completed in
+  GitHub Actions run `33338924829` (`SUCCESS`).
+- Gateway readiness deployment:
+  `0af20f3f-fe4f-4a24-8b3a-71f80821c20c` (`SUCCESS`), using the exact
+  `beta-gateway-48f0644376e791d81ae2176532fe7a4db63b9f2e` image and Railway
+  health check `/health/ready`.
+- Public policy readback returned `raw_card_data=blocked`,
+  `vgs_alias_format=uuid_only`, and `external_vault=vgs_eu_pending`. Deep
+  readiness returned `200` with every dependency `true`.
+- Public negative probes on v1/v2 payment confirm routes returned
+  `403 beta_raw_card_data_blocked`, `403 beta_inline_credentials_blocked`,
+  `403 beta_vgs_eu_not_enabled`, and `403 beta_live_credential_blocked` before
+  router authentication. Railway HTTP logs contained only method, path, status,
+  and duration; no request bodies or credentials were logged.
 - Network readback: the router and UCS have no public domain and no TCP proxy.
 - Remaining hard blocker: no VGS EU sandbox account, verified EU vault,
   least-privilege service account, or VGS Collect integration is available yet.
