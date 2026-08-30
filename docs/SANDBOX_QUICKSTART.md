@@ -10,7 +10,8 @@ This guide is for the current public **test-mode beta**. It is not permission to
 
 These are temporary Railway domains. The API gateway rejects live Stripe
 credentials, non-Stripe connector creation, inline connector credentials, and
-raw card fields on all payment mutations. Do not submit card numbers or CVCs to
+raw card fields on payment and payment-method mutations. The unbounded generic
+tokenization route is disabled as well. Do not submit card numbers or CVCs to
 this API. Transactional email and password-reset delivery are not operational
 yet, so use an address and password you can retain safely.
 

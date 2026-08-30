@@ -16,7 +16,9 @@ The gateway:
   `SignatureKey` credential shape and `test_mode: true`;
 - requires `test_mode: true` when Stripe credentials are configured;
 - rejects inline connector credentials and raw card fields on every v1/v2
-  payment create, update, and confirm mutation;
+  payment, payment-method, and payment-method-session mutation;
+- blocks the unbounded v2 generic tokenization endpoint because its arbitrary
+  payload cannot provide a defensible non-PCI ingress boundary;
 - permits external-vault card payloads only after VGS activation and only when
   every sensitive value uses VGS's UUID-style `tok_sandbox_...` alias format;
 - keeps stored Stripe test processor-token confirms available without allowing

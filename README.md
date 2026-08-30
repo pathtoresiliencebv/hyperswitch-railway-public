@@ -21,8 +21,9 @@ The public API endpoint is the policy gateway at
 `https://beta-gateway-production.up.railway.app`. The underlying router has no
 public Railway domain and is reachable only over Railway private networking.
 The gateway allows the tested Stripe sandbox path while rejecting live Stripe
-credentials, new payment connectors, inline connector credentials, and raw card
-data on every v1/v2 payment mutation. VGS EU is the selected external vault, but
+credentials, new payment connectors, inline connector credentials, raw card
+data on payment and payment-method mutations, and unbounded generic
+tokenization. VGS EU is the selected external vault, but
 its sandbox route remains disabled until the documented activation gates pass.
 After activation, external-vault card fields must use UUID-style VGS sandbox
 aliases; format-preserving values remain blocked. This is a temporary public

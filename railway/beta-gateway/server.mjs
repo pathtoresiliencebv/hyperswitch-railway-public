@@ -77,6 +77,7 @@ export function createBetaGateway({
           external_vault: vgsEuSandboxEnabled
             ? "vgs_eu_sandbox"
             : "vgs_eu_pending",
+          generic_tokenization: "blocked",
           inline_connector_credentials: "blocked",
           live_credentials: "blocked",
           mode: "sandbox_beta",

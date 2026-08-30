@@ -59,6 +59,7 @@ test("publishes the machine-readable beta restrictions", async () => {
   assert.deepEqual(await response.json(), {
     connectors: "stripe_test_only",
     external_vault: "vgs_eu_pending",
+    generic_tokenization: "blocked",
     inline_connector_credentials: "blocked",
     live_credentials: "blocked",
     mode: "sandbox_beta",
@@ -321,6 +322,144 @@ test("blocks inline credentials on PATCH payment updates", async () => {
     (await response.json()).error.code,
     "beta_inline_credentials_blocked",
   );
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("blocks top-level raw cards on v1 payment-method creation", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest("/payment_methods", {
+    card: {
+      card_exp_month: "12",
+      card_exp_year: "30",
+      card_number: "4111111111111111",
+    },
+    payment_method: "card",
+    payment_method_type: "credit",
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_raw_card_data_blocked");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("blocks raw cards on v1 tokenize-card routes", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest("/payment_methods/tokenize-card", {
+    card: {
+      card_cvc: "123",
+      card_expiry_month: "12",
+      card_expiry_year: "30",
+      raw_card_number: "4111111111111111",
+    },
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_raw_card_data_blocked");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("blocks raw cards on v2 payment-method creation", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest("/v2/payment-methods", {
+    payment_method_data: {
+      card: {
+        card_exp_month: "12",
+        card_exp_year: "30",
+        card_number: "4111111111111111",
+      },
+    },
+    payment_method_type: "card",
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_raw_card_data_blocked");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("blocks decrypted wallet PAN fields on payment mutations", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest("/payments/pay_example/confirm", {
+    payment_method_data: {
+      wallet: {
+        apple_pay_decrypted_data: {
+          application_primary_account_number: "4111111111111111",
+        },
+      },
+    },
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_raw_card_data_blocked");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("blocks unbounded v2 generic tokenization", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest("/v2/tokenize", {
+    customer_id: "0a_cus_policy_probe",
+    token_request: { arbitrary_sensitive_value: "blocked" },
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(
+    (await response.json()).error.code,
+    "beta_generic_tokenization_blocked",
+  );
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("gates VGS aliases on v2 payment-method creation", async () => {
+  const beforeCount = receivedRequests.length;
+  const payload = {
+    payment_method_data: {
+      proxy_card: externalVaultCardAliases(),
+    },
+    payment_method_type: "card",
+  };
+
+  const blockedResponse = await jsonRequest("/v2/payment-methods", payload);
+  assert.equal(blockedResponse.status, 403);
+  assert.equal(
+    (await blockedResponse.json()).error.code,
+    "beta_vgs_eu_not_enabled",
+  );
+
+  const allowedResponse = await jsonRequest("/v2/payment-methods", payload, {
+    baseUrl: vgsGatewayUrl,
+  });
+  assert.equal(allowedResponse.status, 200);
+  assert.equal(receivedRequests.length, beforeCount + 1);
+});
+
+test("rejects malformed external-vault containers when VGS is enabled", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest(
+    "/payments/pay_example/confirm",
+    {
+      payment_method_data: {
+        vault_data_card: [{ card_number: "4111111111111111" }],
+      },
+    },
+    { baseUrl: vgsGatewayUrl },
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_raw_card_data_blocked");
+  assert.equal(receivedRequests.length, beforeCount);
+});
+
+test("rejects raw card fields hidden inside external-vault metadata", async () => {
+  const beforeCount = receivedRequests.length;
+  const response = await jsonRequest(
+    "/payments/pay_example/confirm",
+    externalVaultPaymentPayload({
+      extra: { card_number: "4111111111111111" },
+    }),
+    { baseUrl: vgsGatewayUrl },
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error.code, "beta_vgs_alias_required");
   assert.equal(receivedRequests.length, beforeCount);
 });
 

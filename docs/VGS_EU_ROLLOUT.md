@@ -77,11 +77,13 @@ tested flow actually needs. Do not grant broad administrative permissions.
    live credentials, explicit approval, and a fresh end-to-end proof.
 
 The gateway applies this rule to all `POST`, `PUT`, and `PATCH` mutations below
-`/payments` and `/v2/payments`, including v1 confirm and v2
-`confirm-intent/external-vault-proxy`. It blocks recursively nested inline
-connector credentials, Stripe live-key patterns, ordinary raw `card` variants,
-VGS aliases while the rollout flag is disabled, and non-UUID external-vault
-values after activation. Stored Stripe test processor tokens remain supported.
+the v1/v2 payment, payment-method, and payment-method-session paths, including
+v1 confirm and v2 `confirm-intent/external-vault-proxy`. It blocks recursively
+nested inline connector credentials, Stripe live-key patterns, ordinary raw
+card fields, decrypted-wallet PAN fields, VGS aliases while the rollout flag is
+disabled, and non-UUID external-vault values after activation. The unbounded v2
+generic tokenization endpoint is blocked entirely. Stored Stripe test processor
+tokens remain supported.
 
 ## Implementation references
 
