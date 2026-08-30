@@ -90,6 +90,12 @@ build or a Railway `SUCCESS` status alone is not proof that the vault flow works
   `71804ab0-3974-4273-952d-dc8cf8d91ee3` (`SUCCESS`). Public readback from
   `/health/ready` returned `200` with database, Redis, analytics, outgoing
   request, and Unified Connector Service checks all `true`.
+- Railway now uses `/health/ready` instead of the shallow `/health` endpoint as
+  the router deployment health check. Redeployment
+  `735cd715-8044-4461-9c74-7d623e708f6e` reached `SUCCESS` through that stricter
+  release gate.
+- Scheduled deep-readiness smoke run `33338215839` and verification, test,
+  Gitleaks, and image-publication run `33338215846` completed successfully.
 - Gateway deployment: `05064423-95fa-4a64-b960-436ec1960a88` (`SUCCESS`).
 - Post-deploy external smoke run: `33337166095` (`SUCCESS`).
 - Public readback: `/beta-policy` returned `external_vault=vgs_eu_pending`.
