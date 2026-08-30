@@ -12,7 +12,8 @@ The Railway sandbox should contain only:
 2. [`juspay/hyperswitch-web`](https://github.com/juspay/hyperswitch-web) — the browser payment SDK.
 3. [`juspay/hyperswitch-control-center`](https://github.com/juspay/hyperswitch-control-center) — the merchant dashboard.
 4. [`juspay/superposition`](https://github.com/juspay/superposition) — context-aware runtime configuration used by the selected router build.
-5. PostgreSQL, Redis, the test-only policy gateway, encrypted backups, and health checks from this deployment bundle.
+5. [`juspay/hyperswitch-prism`](https://github.com/juspay/hyperswitch-prism) — the Unified Connector Service required by the router's external-vault proxy.
+6. PostgreSQL, Redis, the test-only policy gateway, encrypted backups, and health checks from this deployment bundle.
 
 This is a controlled test sandbox. It is not authorization to process live money.
 
@@ -36,6 +37,7 @@ The Juspay organization exposed 372 public repositories during this audit: 363 a
 | [`hyperswitch-web`](https://github.com/juspay/hyperswitch-web) | Browser SDK and `HyperLoader.js`; required for hosted web payment flows. | Apache-2.0 | Deploy publicly and point it at the protected gateway. |
 | [`hyperswitch-control-center`](https://github.com/juspay/hyperswitch-control-center) | Merchant dashboard for accounts, connectors, payments, refunds, and routing configuration. | Apache-2.0 | Deploy publicly behind the hardened proxy and retain the sandbox warning. |
 | [`superposition`](https://github.com/juspay/superposition) | Context-aware configuration service. The selected router configuration references it and has a local fallback seed. | Apache-2.0 | Deploy privately plus the idempotent seed job. |
+| [`hyperswitch-prism`](https://github.com/juspay/hyperswitch-prism) | Unified Connector Service used by the router's `/confirm-intent/external-vault-proxy` path. The router pins tag `2026.07.02.1`. | Apache-2.0 | Deploy the exact image digest privately, expose only gRPC port 8000 inside Railway, and disable raw connector data. |
 
 ## Important, but not part of this Railway sandbox
 
@@ -46,7 +48,6 @@ The Juspay organization exposed 372 public repositories during this audit: 363 a
 | [`decision-engine`](https://github.com/juspay/decision-engine) | Optional payment-routing control plane with rule, success-rate, cost-aware, experiment, and audit features. | It is AGPL-3.0 and adds substantial operational dependencies such as a SQL store, Redis, ClickHouse, and Kafka in its documented full setup. It is not required for the baseline router and must be evaluated as a separate service and compliance decision. |
 | [`hyperswitch-suite`](https://github.com/juspay/hyperswitch-suite) | Suite map, load tests, and extensive AWS/EKS Terraform. Apache-2.0. | This is reference/infrastructure code for AWS-oriented production deployments, not a Railway application service. Copying the AWS stack into Railway would be the wrong abstraction. |
 | [`hyperswitch-client-core`](https://github.com/juspay/hyperswitch-client-core) and [`hyperswitch-sdk-utils`](https://github.com/juspay/hyperswitch-sdk-utils) | Shared client libraries used by the web/mobile SDK ecosystem. Apache-2.0. | Build-time libraries, not independently deployed server processes. |
-| [`hyperswitch-prism`](https://github.com/juspay/hyperswitch-prism) | Lightweight multi-processor library. Apache-2.0. | An alternative integration shape, not an extra service needed beside the full router. |
 | [`hyperswitch-data-backfill`](https://github.com/juspay/hyperswitch-data-backfill) | Replays database entries into Kafka for ClickHouse seeding. No detected root license. | Only relevant after Kafka/ClickHouse analytics is deliberately enabled; do not reuse until licensing is verified. |
 
 ## Client and commerce integrations: choose only when a product needs them

@@ -7,6 +7,7 @@ Services:
 - `web`: Hyperswitch Web SDK.
 - `control-center`: Hyperswitch dashboard with runtime API/SDK URLs injected from Railway variables.
 - `beta-gateway`: public sandbox policy gateway in front of the private router; Stripe test is active and VGS EU sandbox is selected but gated.
+- `ucs`: private Hyperswitch Prism Unified Connector Service (gRPC) required by the external-vault proxy; raw connector data is disabled.
 - `superposition`: Superposition demo service used by Hyperswitch config.
 - `superposition-seed`: one-shot seed job for Superposition dimensions and defaults.
 - `postgres-backup`: daily encrypted logical backup job with retention and a reusable restore verifier.
@@ -20,6 +21,7 @@ Expected Railway services in one project:
 - `web`
 - `control-center`
 - `beta-gateway`
+- `ucs`
 - `postgres-backup`
 
 The router image uses the local `config/railway.toml`, `payment_required_fields_v2.toml`, `superposition_seed.toml`, and copied Hyperswitch migrations. Runtime secrets and service URLs are set as Railway variables, not stored in this folder.
@@ -46,18 +48,21 @@ Runtime image tags:
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:control-center-20260808-beta-v2`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:beta-gateway-c37c1a814a3b4e3a3cc471011bbb5a140c2034e0`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:postgres-backup-20260807-v3`
+- `ghcr.io/juspay/hyperswitch-prism@sha256:da12c49a601251e08f9d834fff8e4a26a404e3d0fe5ee37f246a9a4168dc227e`
 
 Current deployment verification on 2026-08-30:
 
-- All nine expected services reached Railway `SUCCESS`: PostgreSQL, Redis, Superposition, seed job, private router, policy gateway, Web SDK, control center, and backup job.
+- All ten expected services reached Railway `SUCCESS`: PostgreSQL, Redis, Superposition, seed job, private router, policy gateway, Web SDK, control center, backup job, and private UCS.
 - `curl https://beta-gateway-production.up.railway.app/health` returned `200`, `health is good`, and `X-Hyperswitch-Beta-Mode: stripe-test-only`.
 - `/beta-policy` reports `stripe_test_only`; a fake `sk_live_` connector request was rejected before the private router with `403 beta_live_credential_blocked`.
 - VGS EU is selected but deliberately inactive: `/beta-policy` reports `external_vault=vgs_eu_pending`, `VGS_EU_SANDBOX_ENABLED=false` is set on the gateway, and a fake VGS connector request was rejected before the router with `403 beta_vgs_eu_not_enabled`.
-- Commit `c37c1a814a3b4e3a3cc471011bbb5a140c2034e0` passed the GitHub verification, JavaScript tests, Gitleaks scan, and image publication. Railway router deployment `19ef47f7-b595-4e81-bffe-d55ba5bf7aee` and gateway deployment `05064423-95fa-4a64-b960-436ec1960a88` reached `SUCCESS`; post-deploy external smoke run `33337166095` passed.
+- Commit `c37c1a814a3b4e3a3cc471011bbb5a140c2034e0` passed the GitHub verification, JavaScript tests, Gitleaks scan, and image publication. Railway UCS deployment `b9b655e0-121d-4c39-b690-5713732f9137`, router deployment `075a734f-50cf-4cce-b403-df55515944e7`, and gateway deployment `05064423-95fa-4a64-b960-436ec1960a88` reached `SUCCESS`; post-deploy external smoke run `33337166095` passed.
+- UCS logs report gRPC listening on private port `8000`, metrics on `8080`, Kafka disabled, and raw connector data disabled. The redeployed router logs report `Successfully connected to Unified Connector Service`; the previous missing-UCS warning is gone.
+- The router's deep `/health/ready` endpoint still returns `HE_00` because the optional SQLx analytics health check is not configured. The public `/health` route and all Railway service health checks pass; this remaining analytics failure is a production-readiness gate, not proof of a VGS transaction.
 - `https://web-production-74a9a.up.railway.app/HyperLoader.js` returned `200` and 4,134,119 bytes.
 - `https://control-center-production-c0d3.up.railway.app` returned `200`, included the persistent `Sandbox beta` warning, and returned CSP, HSTS, MIME-sniffing, and frame-denial headers.
 - Router migrations completed and the server listened on private port `8080`; Superposition returned healthy and the seed job logged `Seeding complete!`.
-- Railway reported zero public domains and zero TCP proxies for the router, PostgreSQL, Redis, and Superposition.
+- Railway reported zero public domains and zero TCP proxies for the router, UCS, PostgreSQL, Redis, and Superposition.
 - An encrypted backup written at `2026-08-30T21:15:31Z` passed checksum verification, `pg_restore --list`, and a complete restore into a fresh PostgreSQL 18 container.
 - No live PSP credential, live payment, or external paid call was used during this deployment.
 
@@ -110,7 +115,7 @@ The live root page, `app.js`, and a deep SPA route all returned `200` after this
 ## Network and data hardening
 
 - PostgreSQL is reachable by the application only through Railway private networking at `postgres.railway.internal:5432`.
-- Railway reported zero public domains and zero TCP proxies for PostgreSQL, Redis, Superposition, and the router on 2026-08-30.
+- Railway reported zero public domains and zero TCP proxies for PostgreSQL, Redis, Superposition, UCS, and the router on 2026-08-30.
 - PostgreSQL uses Railway volume `032c8318-5c0d-49f2-b757-9ac2ef6c1d0f` mounted at `/var/lib/postgresql/data`.
 - Redis uses Railway volume `6e81d4de-ced5-4312-80eb-847cc3893ae8` mounted at `/data`. Neither datastore depends on container-local ephemeral storage.
 - Native point-in-time recovery is **not configured or proven** in the current project. The independent encrypted logical backup is operational, but it does not replace native PITR.

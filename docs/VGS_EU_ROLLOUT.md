@@ -44,10 +44,10 @@ tested flow actually needs. Do not grant broad administrative permissions.
 2. Create a dedicated least-privilege sandbox service account. Store its secret
    only in the encrypted HyperSwitch connector account through Railway; do not
    add it as source code or a shared environment variable.
-3. Configure and verify the HyperSwitch Unified Connector Service path required
-   by `/confirm-intent/external-vault-proxy`. The current router warning that UCS
-   configuration is missing must be gone before external-vault proxy traffic is
-   allowed.
+3. **Completed on 2026-08-30:** deploy the pinned HyperSwitch Prism Unified
+   Connector Service privately and connect the router path required by
+   `/confirm-intent/external-vault-proxy`. Router logs confirm the connection;
+   the previous missing-UCS warning is gone.
 4. Configure VGS Collect for `sandbox-eu-1`. PAN, expiry, and CVV must travel
    directly from VGS-controlled fields to VGS. HyperSwitch, Railway, browser
    analytics, support tooling, and application logs may receive only aliases and
@@ -78,14 +78,22 @@ build or a Railway `SUCCESS` status alone is not proof that the vault flow works
 
 - Source commit: `c37c1a814a3b4e3a3cc471011bbb5a140c2034e0`.
 - GitHub verify and image-publication run: `33336975081` (`SUCCESS`).
-- Router deployment: `19ef47f7-b595-4e81-bffe-d55ba5bf7aee` (`SUCCESS`).
+- UCS service: `c5730333-bb91-41ac-98b7-b2353775112b`, deployment
+  `b9b655e0-121d-4c39-b690-5713732f9137` (`SUCCESS`).
+- UCS image: `ghcr.io/juspay/hyperswitch-prism:2026.07.02.1`, pinned at runtime
+  to amd64 digest
+  `sha256:da12c49a601251e08f9d834fff8e4a26a404e3d0fe5ee37f246a9a4168dc227e`.
+- Router deployment after UCS configuration:
+  `075a734f-50cf-4cce-b403-df55515944e7` (`SUCCESS`). Router logs report
+  `Successfully connected to Unified Connector Service`.
 - Gateway deployment: `05064423-95fa-4a64-b960-436ec1960a88` (`SUCCESS`).
 - Post-deploy external smoke run: `33337166095` (`SUCCESS`).
 - Public readback: `/beta-policy` returned `external_vault=vgs_eu_pending`.
 - Negative readback: fake VGS connector creation returned
   `403 beta_vgs_eu_not_enabled`; a fake live Stripe key still returned
   `403 beta_live_credential_blocked`.
-- Network readback: the router has no public domain and no TCP proxy.
-- Remaining hard blocker: router startup still reports
-  `Unified Connector Service config is missing`. No VGS account, credentials,
-  alias operation, PAN, CVV, or paid/live transaction has been used.
+- Network readback: the router and UCS have no public domain and no TCP proxy.
+- Remaining hard blocker: no VGS EU sandbox account, verified EU vault,
+  least-privilege service account, or VGS Collect integration is available yet.
+  No VGS credential, alias operation, PAN, CVV, or paid/live transaction has
+  been used.
