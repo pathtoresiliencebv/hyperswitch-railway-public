@@ -64,13 +64,13 @@ jobs:
 
           curl "${curl_options[@]}" \
             --output "$temporary_directory/HyperLoader.js" \
-            https://web-production-feaf3.up.railway.app/HyperLoader.js
+            https://web-production-74a9a.up.railway.app/HyperLoader.js
           test "$(wc -c < "$temporary_directory/HyperLoader.js")" -gt 1000000
 
           curl "${curl_options[@]}" \
             --dump-header "$temporary_directory/control-center.headers" \
             --output "$temporary_directory/control-center.html" \
-            https://control-center-production-403b.up.railway.app/
+            https://control-center-production-c0d3.up.railway.app/
           grep --fixed-strings --quiet '<div id="app">' \
             "$temporary_directory/control-center.html"
           grep --fixed-strings --quiet 'Sandbox beta' \

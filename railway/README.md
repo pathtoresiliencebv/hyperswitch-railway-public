@@ -29,14 +29,14 @@ The router image uses the local `config/railway.toml`, `payment_required_fields_
 - Account: `msjmohabali@gmail.com`
 - Workspace: `jsnmhbl's Projects`
 - Project: `hyperswitch-eco-saas`
-- Project ID: `601f2d9c-3c85-4b44-ba3c-7cc63c938ab9`
-- Environment ID: `29ca799d-b166-4019-abf6-32aa45fce07b`
+- Project ID: `065c038f-c543-409f-8bfb-1286268c27b0`
+- Environment ID: `27336871-095d-4dfd-ade7-43cf5ecd3cb7`
 
 Public endpoints:
 
 - Protected API gateway: `https://beta-gateway-production.up.railway.app`
-- Web SDK: `https://web-production-feaf3.up.railway.app/HyperLoader.js`
-- Control center: `https://control-center-production-403b.up.railway.app`
+- Web SDK: `https://web-production-74a9a.up.railway.app/HyperLoader.js`
+- Control center: `https://control-center-production-c0d3.up.railway.app`
 
 Runtime image tags:
 
@@ -47,12 +47,25 @@ Runtime image tags:
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:beta-gateway-20260808-v1`
 - `ghcr.io/pathtoresiliencebv/hyperswitch-railway-public:postgres-backup-20260807-v3`
 
-Verification on 2026-08-08:
+Current deployment verification on 2026-08-30:
+
+- All nine expected services reached Railway `SUCCESS`: PostgreSQL, Redis, Superposition, seed job, private router, policy gateway, Web SDK, control center, and backup job.
+- `curl https://beta-gateway-production.up.railway.app/health` returned `200`, `health is good`, and `X-Hyperswitch-Beta-Mode: stripe-test-only`.
+- `/beta-policy` reports `stripe_test_only`; a fake `sk_live_` connector request was rejected before the private router with `403 beta_live_credential_blocked`.
+- `https://web-production-74a9a.up.railway.app/HyperLoader.js` returned `200` and 4,134,119 bytes.
+- `https://control-center-production-c0d3.up.railway.app` returned `200`, included the persistent `Sandbox beta` warning, and returned CSP, HSTS, MIME-sniffing, and frame-denial headers.
+- Router migrations completed and the server listened on private port `8080`; Superposition returned healthy and the seed job logged `Seeding complete!`.
+- Railway reported zero public domains and zero TCP proxies for the router, PostgreSQL, Redis, and Superposition.
+- An encrypted backup written at `2026-08-30T21:15:31Z` passed checksum verification, `pg_restore --list`, and a complete restore into a fresh PostgreSQL 18 container.
+- No live PSP credential, live payment, or external paid call was used during this deployment.
+
+The following evidence belongs to the previous Railway project, which was no longer available on 2026-08-30. It is retained only as historical regression and image-provenance evidence; its old Web SDK and control-center URLs must not be treated as live endpoints.
+
+Historical verification on 2026-08-08:
 
 - `curl https://beta-gateway-production.up.railway.app/health` returned `200` with `health is good` and `X-Hyperswitch-Beta-Mode: stripe-test-only`.
 - The gateway rejects fake live Stripe keys and inline payment credentials with `403`, while CORS preflight and the sandbox payment API remain available.
-- `curl -I https://web-production-feaf3.up.railway.app/HyperLoader.js` returned `200`.
-- `curl -I https://control-center-production-403b.up.railway.app` returned `200`.
+- The then-current Web SDK and control-center endpoints returned `200`.
 - Railway health checks are configured for `/health`, `/health`, `/HyperLoader.js`, and `/` on the router, gateway, Web SDK, and control center respectively.
 - Beta gateway deployment `5c23d842-650e-45c3-b2c6-eb774880fd45` reached `SUCCESS` with image digest `sha256:aaaf193ac74c747e39c3d61bf8a7ecc42af7dc08f6a7680021e341d455718a7a`.
 - Control center deployment `ae9dab6f-9d19-4148-af78-46783083f242` reached `SUCCESS` with image digest `sha256:0d2e23eceef43ddd234dd0a6f2643aa811b547ed6fc289401387c3f74de5db50`. Its dashboard points to the protected gateway, shows a persistent sandbox warning, and reflows without horizontal overflow at an emulated 320 CSS px viewport.
@@ -95,37 +108,38 @@ The live root page, `app.js`, and a deep SPA route all returned `200` after this
 ## Network and data hardening
 
 - PostgreSQL is reachable by the application only through Railway private networking at `postgres.railway.internal:5432`.
-- The public PostgreSQL TCP proxy `centerbeam.proxy.rlwy.net:17896` was deleted on 2026-08-07. A follow-up Railway inspection returned zero TCP proxies for the database service.
-- The router private network endpoint `router.railway.internal` and the Postgres private endpoint were both reported as `ACTIVE` after the change.
-- PostgreSQL uses Railway volume `postgres-volume` (`e56a25dc-866c-4b21-aaf7-ca33df2dbb54`) mounted at `/var/lib/postgresql/data`, provisioned at 5 GB.
-- Redis uses its own persistent Railway volume. Neither datastore depends on container-local ephemeral storage.
-- Native point-in-time recovery is **not enabled yet**. Railway reported no PITR configuration and no native restore points on 2026-08-07. The native volume-backup API rejected schedule creation with `Not Authorized`, so PITR still requires the Postgres service's **Backups** tab or a plan/permission change.
+- Railway reported zero public domains and zero TCP proxies for PostgreSQL, Redis, Superposition, and the router on 2026-08-30.
+- PostgreSQL uses Railway volume `032c8318-5c0d-49f2-b757-9ac2ef6c1d0f` mounted at `/var/lib/postgresql/data`.
+- Redis uses Railway volume `6e81d4de-ced5-4312-80eb-847cc3893ae8` mounted at `/data`. Neither datastore depends on container-local ephemeral storage.
+- Native point-in-time recovery is **not configured or proven** in the current project. The independent encrypted logical backup is operational, but it does not replace native PITR.
 
 ### Independent database backups
 
-- Private Railway bucket: `hyperswitch-pg-backups` (`00aec2fc-1e62-4d61-b076-ae85290b4f40`) in EU West (`ams`).
-- Backup service: `postgres-backup` (`7022ad6b-2a60-48cc-95c5-616ffdffe0c0`).
+- Private Railway bucket: `hyperswitch-pg-backups` (`91e6bdd8-8345-4f78-9c76-9175a01b0c46`) in EU West (`ams`).
+- Backup service: `postgres-backup` (`c4197612-8d1c-4873-aec5-e42bdfcd393e`).
 - Schedule: every day at `02:00 UTC` with 35-day application-managed retention.
 - Format: PostgreSQL 18 custom-format dump, encrypted client-side with AES-256-CBC, PBKDF2, and 200,000 iterations. The encrypted dump, SHA-256 checksum, and JSON manifest are stored as three private objects.
 - Every scheduled run validates the unencrypted dump catalog with `pg_restore --list` before encryption and upload. A structurally invalid dump fails the job instead of being stored as a successful backup.
-- The bucket credentials and encryption key were rotated after initial provisioning. The pre-rotation backup objects were explicitly deleted; only the backup written with the current credentials and key remains.
-- Latest verified backup: `postgres/daily/hyperswitch-2026-08-07T21-15-02Z.dump.enc`, SHA-256 `19bf1a1fc93d381c5dd056476345350fe72dd640d0bac4995ed7a7dbb4279c75`. The strengthened job executed on Railway, logged the pre-encryption catalog validation, and finished with `BACKUP_OK`.
-- Latest restore drill passed: download, checksum, decryption, `pg_restore --list`, and a complete restore into a fresh PostgreSQL 18 container all succeeded. The restored database contained 5 merchant accounts, 5 users, and 0 API keys, matching the source state at backup time. The temporary cron acceleration was reverted; the next scheduled run remains `02:00 UTC`.
+- Latest verified backup: `postgres/daily/hyperswitch-2026-08-30T21-15-31Z.dump.enc`, SHA-256 `1d5711f6d8196fa69ffce9038ce2144542cefbe5c62d2219b474598636e7730e`.
+- Latest restore drill passed: download, checksum, decryption, `pg_restore --list`, and a complete restore into a fresh PostgreSQL 18 container all succeeded. The new sandbox database contained 0 merchant accounts, 0 users, and 0 API keys at backup time. The temporary 5-minute schedule was reverted; the active schedule is `02:00 UTC`.
 
 The encryption key currently lives only as a Railway service variable. Escrow it in an external password manager or secrets vault before relying on this backup for company-wide disaster recovery.
 
 Railway dashboard:
 
-- `https://railway.com/project/601f2d9c-3c85-4b44-ba3c-7cc63c938ab9?environmentId=29ca799d-b166-4019-abf6-32aa45fce07b`
+- `https://railway.com/project/065c038f-c543-409f-8bfb-1286268c27b0?environmentId=27336871-095d-4dfd-ade7-43cf5ecd3cb7`
 
 ## Production boundary
 
 The platform and tenant onboarding are live as a controlled sandbox beta. Stripe test mode has been proven for payment, signed webhook delivery, and a Hyperswitch-initiated partial refund. The public gateway intentionally prevents merchants from configuring live Stripe credentials or creating other connector types. Never commit PSP credentials to this bundle; store test credentials through the control center.
 
+The intended commercial architecture is non-PCI payment orchestration for mid-size merchants using a third-party PCI-compliant vault such as VGS or TokenEx. Cardholder data must be collected and tokenized by that vault; the Railway router may receive only vault tokens and non-sensitive orchestration data. This reduces PCI scope but is not, by itself, a compliance certificate. The current mock locker is test-only and must never receive real PAN or CVV data.
+
 The current deployment uses Railway-provided domains. Add owned custom domains and transactional email before presenting this as a fully branded commercial product. The router's `release` feature set includes email support, but the live config still contains the local MailHog SMTP placeholders and Railway has no SMTP/SES variables. Signup works, while email verification and password-reset delivery are not operational until a real transactional-email provider is configured and tested.
 
-Do not call this production-ready for real customers until all three remaining gates are closed:
+Do not call this production-ready for real customers until all four remaining gates are closed:
 
-1. Enable Railway PITR and prove a native point-in-time restore. The independent daily encrypted dump and full restore test already provide a second recovery path, but its encryption key still needs external escrow.
-2. Configure owned API, SDK, and control-center domains with final CORS and redirect settings.
-3. Ship transactional email, legal pages, privacy/retention rules, monitoring alerts, and a customer-support process.
+1. Select and contract the third-party vault, complete tokenization and detokenization integration, document residual PCI scope, and prove that PAN/CVV never reaches the router, logs, database, or support tooling.
+2. Enable Railway PITR and prove a native point-in-time restore. The independent daily encrypted dump and full restore test already provide a second recovery path, but its encryption key still needs external escrow.
+3. Configure owned API, SDK, and control-center domains with final CORS and redirect settings.
+4. Ship transactional email, legal pages, privacy/retention rules, monitoring alerts, and a customer-support process.

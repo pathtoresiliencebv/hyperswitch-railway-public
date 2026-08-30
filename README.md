@@ -8,6 +8,10 @@ The deployable bundle lives in `railway/`. Runtime credentials, encryption keys,
 
 Customer-facing test-mode onboarding is documented in [`docs/SANDBOX_QUICKSTART.md`](docs/SANDBOX_QUICKSTART.md). It explicitly stays inside the current beta boundary and includes the Stripe CLI payment, webhook, and partial-refund verification path.
 
+The Juspay organization scan and the deploy/exclude decision for the related
+repositories are documented in
+[`docs/JUSPAY_REPOSITORY_AUDIT.md`](docs/JUSPAY_REPOSITORY_AUDIT.md).
+
 ## Public beta boundary
 
 The public API endpoint is the policy gateway at
